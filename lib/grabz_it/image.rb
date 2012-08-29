@@ -8,7 +8,7 @@ module GrabzIt
         @size = @image_bytes ? @image_bytes.size : 0
         @content_type = response.header['content-type']
       rescue => ex
-        raise "Invalid Response"
+        raise "Invalid Response: #{ex.message}"
       end
     end
 

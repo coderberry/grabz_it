@@ -114,8 +114,8 @@ module GrabzIt
     def take_picture(options = {})
       parse_options(options)
       action = "takepicture.ashx"
-      response_body = query_api(action, generate_params)
-      response = Response.new(response_body)
+      res = query_api(action, generate_params)
+      response = Response.new(res.body)
       raise response.message if response.message
       response
     end
@@ -158,8 +158,8 @@ module GrabzIt
         :domain => URI.escape(domain),
         :sig => sig
       }
-      response_body = query_api(action, params)
-      cookie_jar = CookieJar.new(response_body)
+      res = query_api(action, params)
+      cookie_jar = CookieJar.new(res.body)
       raise cookie_jar.message if cookie_jar.message
       cookie_jar
     end
@@ -196,8 +196,8 @@ module GrabzIt
     #
     def get_picture(screenshot_id)
       action = "getpicture.ashx"
-      response = query_api(action, { :id => screenshot_id })
-      image = Image.new(response)
+      res = query_api(action, { :id => screenshot_id })
+      image = Image.new(res)
       image
     end
 
@@ -209,7 +209,7 @@ module GrabzIt
       uri = URI("#{API_BASE_URL}#{action}")
       uri.query = URI.encode_www_form(params)
       res = Net::HTTP.get_response(uri)
-      res.body
+      res
     end
 
     # Convert the options into the instance variable values
