@@ -65,7 +65,7 @@ options = {
   :format         => 'png',
   :delay          => 1000
 }
-response = client.take_picture('google', options)
+response = client.take_picture(options)
 
 puts response.screenshot_id
 # => 'Y2F2bmViQGdtYWlsLmNvbQ==-20943258e37c4fc28c4977cd76c40f58'
