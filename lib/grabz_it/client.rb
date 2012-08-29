@@ -1,7 +1,3 @@
-require 'digest/md5'
-require 'uri'
-require 'net/http'
-
 module GrabzIt
   class Client
     attr_accessor :app_key, :app_secret, :url, :callback_url, :browser_width, :browser_height, 
@@ -9,23 +5,201 @@ module GrabzIt
 
     API_BASE_URL = "http://grabz.it/services/"
 
+    ##
+    # Initialize the +GrabzIt::Client+ class
+    #
+    # @param [String] app_key Application Key provided by grabz.it
+    # @param [String] app_secret Application Secret provided by grabz.it
+    #
+    # @raise [ArgumentError] Exception raised if the app_key or app_secret is not provided
+    #
     def initialize(app_key, app_secret)
       @app_key = app_key
       @app_secret = app_secret
       raise(ArgumentError, "You must provide app_key and app_secret") unless @app_key && @app_secret
     end
 
-    def take_picture(options={})
+    ##
+    # Calls the GrabzIt web service to take the screenshot. Warning, this is a SYNCHONOUS method and can take up to
+    # 5 minutes before a response.
+    #
+    # @param [String] target_path File path that the file should be saved to (including file name and extension)
+    # @param [Hash] options Data that is to be passed to the web service
+    # @option options [String]  :url The URL that the screenshot should be made of
+    # @option options [String]  :callback_url The handler the GrabzIt web service should call after it has completed its work
+    # @option options [String]  :custom_id A custom identifier that you can pass through to the screenshot webservice. This will be returned with the callback URL you have specified.
+    # @option options [Integer] :browser_width The width of the browser in pixels
+    # @option options [Integer] :browser_height The height of the browser in pixels
+    # @option options [Integer] :output_width The width of the resulting thumbnail in pixels
+    # @option options [Integer] :output_height The height of the resulting thumbnail in pixels
+    # @option options [String]  :format The format the screenshot should be in: bmp8, bmp16, bmp24, bmp, gif, jpg, png
+    # @option options [Integer] :delay The number of milliseconds to wait before taking the screenshot
+    # 
+    # @return [GrabzIt::Response] The parsed response.
+    #
+    # @example
+    #   client = GrabzIt::Client.new('TEST_KEY', 'TEST_SECRET')
+    #   options = {
+    #     :url            => 'http://grabz.it',
+    #     :callback_url   => 'http://example.com/callback',
+    #     :browser_width  => 1024,
+    #     :browser_height => 768,
+    #     :output_width   => 800,
+    #     :output_height  => 600,
+    #     :custom_id      => '12345',
+    #     :format         => 'png',
+    #     :delay          => 1000
+    #   }
+    #   response = client.take_picture(options)
+    #
+    def save_picture(target_path, options = {})
+      response = take_picture(options)
+
+      # Wait for the response to be ready
+      iterations = 0
+      while true do
+        status = get_status(response.screenshot_id)
+
+        if status.failed?
+          raise "The screenshot did not complete with errors: " + status.message
+
+        elsif status.available?
+          image = get_picture(response.screenshot_id)
+          image.save(target_path)
+          break
+        end
+
+        # Check again in 1 second with a max of 5 minutes
+        if iterations <= (5 * 60)
+          sleep(1)
+        else
+          raise Timeout::Error
+        end
+      end
+
+      true
+    end
+
+    ##
+    # Calls the GrabzIt web service to take the screenshot.
+    #
+    # @param [Hash] options Data that is to be passed to the web service
+    # @option options [String]  :url The URL that the screenshot should be made of
+    # @option options [String]  :callback_url The handler the GrabzIt web service should call after it has completed its work
+    # @option options [String]  :custom_id A custom identifier that you can pass through to the screenshot webservice. This will be returned with the callback URL you have specified.
+    # @option options [Integer] :browser_width The width of the browser in pixels
+    # @option options [Integer] :browser_height The height of the browser in pixels
+    # @option options [Integer] :output_width The width of the resulting thumbnail in pixels
+    # @option options [Integer] :output_height The height of the resulting thumbnail in pixels
+    # @option options [String]  :format The format the screenshot should be in: bmp8, bmp16, bmp24, bmp, gif, jpg, png
+    # @option options [Integer] :delay The number of milliseconds to wait before taking the screenshot
+    # 
+    # @return [GrabzIt::Response] The parsed response.
+    #
+    # @example
+    #   client = GrabzIt::Client.new('TEST_KEY', 'TEST_SECRET')
+    #   options = {
+    #     :url            => 'http://grabz.it',
+    #     :callback_url   => 'http://example.com/callback',
+    #     :browser_width  => 1024,
+    #     :browser_height => 768,
+    #     :output_width   => 800,
+    #     :output_height  => 600,
+    #     :custom_id      => '12345',
+    #     :format         => 'png',
+    #     :delay          => 1000
+    #   }
+    #   response = client.take_picture(options)
+    #
+    def take_picture(options = {})
       parse_options(options)
-      uri = URI("#{API_BASE_URL}takepicture.ashx")
-      uri.query = URI.encode_www_form(generate_params)
-      res = Net::HTTP.get_response(uri)
-      puts res.body if res.is_a?(Net::HTTPSuccess)
-      res
+      action = "takepicture.ashx"
+      response_body = query_api(action, generate_params)
+      response = Response.new(response_body)
+      raise response.message if response.message
+      response
+    end
+
+    ##
+    # Get the current status of a GrabzIt screenshot.
+    #
+    # @param [String] screenshot_id The id of the screenshot provided by the GrabzIt api
+    # 
+    # @return [GrabzIt::Status] The parsed status.
+    #
+    # @example
+    #   client = GrabzIt::Client.new('TEST_KEY', 'TEST_SECRET')
+    #   status = client.get_status('Y2F2bmViQGdtYWlsLmNvbQ==-20943258e37c4fc28c4977cd76c40f58')
+    #
+    def get_status(screenshot_id)
+      action = "getstatus.ashx"
+      response_body = query_api(action, { :id => screenshot_id })
+      status = Status.new(response_body)
+      raise status.message if status.message
+      status
+    end
+
+    ##
+    # Get the current status of a GrabzIt screenshot.
+    #
+    # @param [String] screenshot_id The id of the screenshot provided by the GrabzIt api
+    # 
+    # @return [GrabzIt::Status] The parsed status.
+    #
+    # @example
+    #   client = GrabzIt::Client.new('TEST_KEY', 'TEST_SECRET')
+    #   status = client.get_status('Y2F2bmViQGdtYWlsLmNvbQ==-20943258e37c4fc28c4977cd76c40f58')
+    #
+    def get_cookies(domain)
+      action = "getcookies.ashx"
+      sig = Digest::MD5.hexdigest(@app_secret + "|" + domain)
+      params = {
+        :key => URI.escape(@app_key),
+        :domain => URI.escape(domain),
+        :sig => sig
+      }
+      response_body = query_api(action, params)
+      cookie_jar = CookieJar.new(response_body)
+      raise cookie_jar.message if cookie_jar.message
+      cookie_jar
+    end
+
+    ##
+    # Get the screenshot image
+    #
+    # @param [String] screenshot_id The id of the screenshot provided by the GrabzIt api
+    # 
+    # @return [GrabzIt::Image] The image object
+    #
+    # @example
+    #   client = GrabzIt::Client.new('TEST_KEY', 'TEST_SECRET')
+    #   image = client.get_image('Y2F2bmViQGdtYWlsLmNvbQ==-20943258e37c4fc28c4977cd76c40f58')
+    #   puts image.content_type
+    #   => 'image/png'
+    #   puts image.size
+    #   => 129347
+    #   image.save("/tmp/myimage.png")
+    #   File.exist?("/tmp/myimage.png")
+    #   => true
+    #
+    def get_picture(screenshot_id)
+      action = "getpicture.ashx"
+      response = query_api(action, { :id => screenshot_id })
+      image = Image.new(response)
+      image
     end
 
   private
 
+    # Helper method that performs the request
+    def query_api(action, params)
+      uri = URI("#{API_BASE_URL}#{action}")
+      uri.query = URI.encode_www_form(params)
+      res = Net::HTTP.get_response(uri)
+      res.body
+    end
+
+    # Convert the options into the instance variable values
     def parse_options(options={})
       options = options.symbolize_keys
       @url            = options[:url] || ''
@@ -39,6 +213,7 @@ module GrabzIt
       @delay          = options[:delay]          || ''
     end
 
+    # Generate the params that are to be used in the request
     def generate_params
       {
         :key      => URI.escape(@app_key),
@@ -55,6 +230,7 @@ module GrabzIt
       }
     end
 
+    # Generate the signature that is used in the request
     def generate_signature
       sig = []
       sig << @app_secret
