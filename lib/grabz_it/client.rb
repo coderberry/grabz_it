@@ -20,8 +20,8 @@ module GrabzIt
     end
 
     ##
-    # Calls the GrabzIt web service to take the screenshot. Warning, this is a SYNCHONOUS method and can take up to
-    # 5 minutes before a response.
+    # Calls the GrabzIt web service to take the screenshot and saves it to the target path provided. Warning, this is a 
+    # SYNCHONOUS method and can take up to 5 minutes before a response.
     #
     # @param [String] target_path File path that the file should be saved to (including file name and extension)
     # @param [Hash] options Data that is to be passed to the web service
@@ -50,7 +50,7 @@ module GrabzIt
     #     :format         => 'png',
     #     :delay          => 1000
     #   }
-    #   response = client.take_picture(options)
+    #   response = client.save_picture('google', options)
     #
     def save_picture(target_path, options = {})
       response = take_picture(options)
@@ -140,17 +140,17 @@ module GrabzIt
     end
 
     ##
-    # Get the current status of a GrabzIt screenshot.
+    # Get all the cookies that GrabzIt is using for a particular domain. This may include your user set cookies as well.
     #
-    # @param [String] screenshot_id The id of the screenshot provided by the GrabzIt api
+    # @param [String] domain The domain of the cookie
     # 
-    # @return [GrabzIt::Status] The parsed status.
+    # @return [GrabzIt::CookieJar] The container that holds the cookies
     #
     # @example
     #   client = GrabzIt::Client.new('TEST_KEY', 'TEST_SECRET')
-    #   status = client.get_status('Y2F2bmViQGdtYWlsLmNvbQ==-20943258e37c4fc28c4977cd76c40f58')
+    #   cookie_jar = client.get_cookie_jar('google')
     #
-    def get_cookies(domain)
+    def get_cookie_jar(domain)
       action = "getcookies.ashx"
       sig = Digest::MD5.hexdigest(@app_secret + "|" + domain)
       params = {
@@ -163,6 +163,18 @@ module GrabzIt
       raise cookie_jar.message if cookie_jar.message
       cookie_jar
     end
+
+    ##
+    # Pending API documentation
+    #
+    # def set_cookie(options = {})
+    # end
+
+    ##
+    # Pending API documentation
+    #
+    # def delete_cookie(name, domain)
+    # end
 
     ##
     # Get the screenshot image
@@ -193,6 +205,7 @@ module GrabzIt
 
     # Helper method that performs the request
     def query_api(action, params)
+      params = params.symbolize_keys
       uri = URI("#{API_BASE_URL}#{action}")
       uri.query = URI.encode_www_form(params)
       res = Net::HTTP.get_response(uri)

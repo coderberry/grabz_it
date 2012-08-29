@@ -127,7 +127,7 @@ describe GrabzIt::Client do
     ## ------------------------------------------------------------------------------------
     # Get Cookies
     ## ------------------------------------------------------------------------------------
-    describe "#get_cookies" do
+    describe "#get_cookie_jar" do
       it "with valid domain" do
         xml = <<-EOF
           <?xml version="1.0"?>
@@ -164,7 +164,7 @@ describe GrabzIt::Client do
           </WebResult>
         EOF
         @client.stub!(:query_api).and_return(xml)
-        cookie_jar = @client.get_cookies('google')
+        cookie_jar = @client.get_cookie_jar('google')
         cookie_jar.cookies.size.should eq(3)
         cookie_jar.cookies[0].name.should eq('secure')
         cookie_jar.cookies[0].domain.should eq('accounts.google.com')
@@ -179,7 +179,7 @@ describe GrabzIt::Client do
           </WebResult>
         EOF
         @client.stub!(:query_api).and_return(xml)
-        cookie_jar = @client.get_cookies('fsoi')
+        cookie_jar = @client.get_cookie_jar('fsoi')
         cookie_jar.cookies.should be_empty
       end
     end
