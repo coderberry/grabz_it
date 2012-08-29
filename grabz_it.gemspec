@@ -4,9 +4,9 @@ require File.expand_path('../lib/grabz_it/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Eric Berry"]
   gem.email         = ["cavneb@gmail.com"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
-  gem.homepage      = ""
+  gem.description   = "Ruby interface to the GrabzIt (grabz.it) service"
+  gem.summary       = "Ruby interface to the GrabzIt (grabz.it) service"
+  gem.homepage      = "https://github.com/cavneb/grabz_it"
 
   gem.files         = `git ls-files`.split($\)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
