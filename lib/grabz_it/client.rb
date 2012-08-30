@@ -16,6 +16,11 @@ module GrabzIt
     def initialize(app_key, app_secret)
       @app_key = app_key
       @app_secret = app_secret
+
+      if GrabzIt.logger
+        GrabzIt.logger.info "Initialized client with [#{app_key}] and [#{app_secret}]"
+      end
+
       raise(ArgumentError, "You must provide app_key and app_secret") unless @app_key && @app_secret
     end
 
@@ -66,6 +71,11 @@ module GrabzIt
         elsif status.available?
           image = get_picture(response.screenshot_id)
           image.save(target_path)
+
+          if GrabzIt.logger
+            GrabzIt.logger.info "[Client][save_picture] Image was created with screenshot_id of [#{image.screenshot_id}]"
+          end
+
           break
         end
 
@@ -73,6 +83,9 @@ module GrabzIt
         if iterations <= (5 * 60)
           sleep(1)
         else
+          if GrabzIt.logger
+            GrabzIt.logger.error "[Client][save_picture] Attempting to retrieve the screenshot timed out after 5 minutes"
+          end
           raise Timeout::Error
         end
       end
@@ -115,6 +128,10 @@ module GrabzIt
       parse_options(options)
       action = "takepicture.ashx"
       res = query_api(action, generate_params)
+      if GrabzIt.logger
+        GrabzIt.logger.info "[Client][take_picture] Request: #{generate_params}"
+        GrabzIt.logger.info "[Client][take_picture] Response: #{res.body}"
+      end
       response = Response.new(res.body)
       raise response.message if response.message
       response
@@ -134,6 +151,10 @@ module GrabzIt
     def get_status(screenshot_id)
       action = "getstatus.ashx"
       response_body = query_api(action, { :id => screenshot_id })
+      if GrabzIt.logger
+        GrabzIt.logger.info "[Client][get_status] Request: #{{ :id => screenshot_id }}"
+        GrabzIt.logger.info "[Client][get_status] Response: #{response_body}"
+      end
       status = Status.new(response_body)
       raise status.message if status.message
       status
@@ -159,6 +180,10 @@ module GrabzIt
         :sig => sig
       }
       res = query_api(action, params)
+      if GrabzIt.logger
+        GrabzIt.logger.info "[Client][get_cookie_jar] Request: #{params}"
+        GrabzIt.logger.info "[Client][get_cookie_jar] Response: #{res.body}"
+      end
       cookie_jar = CookieJar.new(res.body)
       raise cookie_jar.message if cookie_jar.message
       cookie_jar
@@ -198,6 +223,10 @@ module GrabzIt
       action = "getpicture.ashx"
       res = query_api(action, { :id => screenshot_id })
       image = Image.new(res)
+      if GrabzIt.logger
+        GrabzIt.logger.info "[Client][get_picture] Request: #{{ :id => screenshot_id }}"
+        GrabzIt.logger.info "[Client][get_picture] Response: #{image.to_s}"
+      end
       image
     end
 

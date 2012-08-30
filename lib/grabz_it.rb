@@ -6,3 +6,9 @@ require 'net/http'
 Dir[File.join(File.dirname(__FILE__), "grabz_it", "*rb")].each do |file|
   require file
 end
+
+module GrabzIt
+  class << self
+    attr_accessor :logger
+  end
+end

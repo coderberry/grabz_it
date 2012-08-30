@@ -16,5 +16,9 @@ module GrabzIt
       File.open(path, 'wb') { |s| s.write(@image_bytes) }
     end
 
+    def to_s
+      "#{@content_type} (#{@size} bytes)"
+    end
+
   end
 end
