@@ -2,6 +2,8 @@
 
 Interfaces with the GrabzIt screenshot service (http://grabz.it)
 
+**This is not the official version of the GrabzIt Ruby Gem. If you want the latest official version please visit: http://grabz.it/api/ruby/download.aspx**
+
 Yard docs can be found at http://www.rubydoc.info/github/cavneb/grabz_it/master/frames
 
 ## Installation
